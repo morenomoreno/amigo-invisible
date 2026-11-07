@@ -22,6 +22,7 @@ const b64u = (buf) => buf.toString("base64url");
 const asignacion = sorteo(nombres.length);
 const data = {};
 const enlaces = [];
+const mensajes = [];
 
 nombres.forEach((nombre, i) => {
   const token = randomBytes(16);                       // 128 bits: imposible de adivinar
@@ -32,11 +33,14 @@ nombres.forEach((nombre, i) => {
   const plano = JSON.stringify({ de: nombre, para: nombres[asignacion[i]], mensaje: cfg.mensaje });
   const ct = Buffer.concat([cipher.update(plano, "utf8"), cipher.final(), cipher.getAuthTag()]);
   data[id] = { iv: b64u(iv), ct: b64u(ct) };
-  enlaces.push(`${nombre}: ${cfg.baseUrl}#${b64u(token)}`);
+  const enlace = `${cfg.baseUrl}#${b64u(token)}`;
+  enlaces.push(`${nombre}: ${enlace}`);
+  mensajes.push(`===== ${nombre} =====\n` + cfg.whatsapp.replaceAll("{nombre}", nombre).replaceAll("{enlace}", enlace));
 });
 
 // Orden de las entradas aleatorio para no delatar el orden de los participantes
 const ordenado = Object.fromEntries(Object.entries(data).sort(([a], [b]) => a.localeCompare(b)));
 writeFileSync(new URL("./docs/data.json", import.meta.url), JSON.stringify({ titulo: cfg.titulo, entradas: ordenado }) + "\n");
 writeFileSync(new URL("./enlaces.txt", import.meta.url), enlaces.join("\n") + "\n");
-console.log(`Sorteo hecho para ${nombres.length} personas. Enlaces en enlaces.txt (no contiene resultados).`);
+writeFileSync(new URL("./mensajes.txt", import.meta.url), mensajes.join("\n\n\n") + "\n");
+console.log(`Sorteo hecho para ${nombres.length} personas. Enlaces en enlaces.txt y mensajes de WhatsApp en mensajes.txt (no contienen resultados).`);

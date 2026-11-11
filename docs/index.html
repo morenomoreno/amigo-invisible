@@ -40,7 +40,7 @@
     <p id="hola2" class="muted"></p>
     <p>Te ha tocado regalar a</p>
     <div class="nombre" id="para"></div>
-    <p class="presupuesto">💶 Presupuesto: de 20 a 30 €</p>
+    <p class="presupuesto">💶 Presupuesto: <span id="presupuesto">de 20 a 30 €</span></p>
     <p class="mensaje" id="mensaje"></p>
   </section>
   <section id="error" hidden>
@@ -69,6 +69,7 @@
     $("hola2").textContent = `${r.de},`;
     $("para").textContent = r.para;
     $("mensaje").textContent = r.mensaje;
+    if (data.presupuesto) $("presupuesto").textContent = data.presupuesto;
     $("ver").onclick = () => mostrar("resultado");
     mostrar("tapado");
   } catch { mostrar("error"); }

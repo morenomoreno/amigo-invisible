@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta property="og:title" content="Amigo invisible 🎁">
+<meta property="og:description" content="Abre el enlace para descubrir a quién te ha tocado.">
+<title>Amigo invisible 🎁</title>
+<style>
+  :root { --bg:#fbf7f2; --card:#fff; --ink:#2b2320; --muted:#7a6d66; --accent:#c0392b; --line:#eadfd6; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1b1715; --card:#26201d; --ink:#f3ece6; --muted:#b3a59c; --accent:#ff6b5a; --line:#3a312c; } }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; padding:16px;
+         background:var(--bg); color:var(--ink); font:17px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  main { width:100%; max-width:420px; background:var(--card); border:1px solid var(--line);
+         border-radius:20px; padding:32px 24px; text-align:center; }
+  .gift { font-size:56px; line-height:1; }
+  h1 { font-size:22px; margin:12px 0 4px; }
+  .muted { color:var(--muted); }
+  button { margin-top:20px; font:inherit; font-weight:600; color:#fff; background:var(--accent);
+           border:0; border-radius:999px; padding:12px 28px; cursor:pointer; }
+  .nombre { font-size:34px; font-weight:800; color:var(--accent); margin:8px 0 16px; word-break:break-word; }
+  .presupuesto { font-weight:600; margin:0 0 16px; }
+  .mensaje { border-top:1px solid var(--line); padding-top:16px; white-space:pre-line; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="gift">🎁</div>
+  <section id="cargando"><p class="muted">Cargando…</p></section>
+  <section id="tapado" hidden>
+    <h1 id="hola"></h1>
+    <p class="muted">Asegúrate de que nadie mira tu pantalla.</p>
+    <button id="ver">Descubrir a quién me ha tocado</button>
+  </section>
+  <section id="resultado" hidden>
+    <p id="hola2" class="muted"></p>
+    <p>Te ha tocado regalar a</p>
+    <div class="nombre" id="para"></div>
+    <p class="presupuesto">💶 Presupuesto: <span id="presupuesto">de 20 a 30 €</span></p>
+    <p class="mensaje" id="mensaje"></p>
+  </section>
+  <section id="error" hidden>
+    <h1>Enlace no válido</h1>
+    <p class="muted">Copia el enlace completo que te enviaron, incluida la parte que va después de “#”.</p>
+  </section>
+</main>
+<script>
+(async () => {
+  const $ = (id) => document.getElementById(id);
+  const mostrar = (id) => { for (const s of ["cargando","tapado","resultado","error"]) $(s).hidden = s !== id; };
+  const b64u = (s) => Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")), c => c.charCodeAt(0));
+  const sha = async (prefijo, token) => new Uint8Array(await crypto.subtle.digest("SHA-256",
+    new Uint8Array([...new TextEncoder().encode(prefijo), ...token])));
+  try {
+    const token = b64u(location.hash.slice(1));
+    if (token.length !== 16) throw 0;
+    const id = [...(await sha("id:", token))].map(b => b.toString(16).padStart(2,"0")).join("").slice(0,32);
+    const data = await (await fetch("data.json", { cache: "no-store" })).json();
+    const e = data.entradas[id];
+    if (!e) throw 0;
+    const key = await crypto.subtle.importKey("raw", await sha("key:", token), "AES-GCM", false, ["decrypt"]);
+    const plano = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64u(e.iv) }, key, b64u(e.ct));
+    const r = JSON.parse(new TextDecoder().decode(plano));
+    $("hola").textContent = `¡Hola, ${r.de}!`;
+    $("hola2").textContent = `${r.de},`;
+    $("para").textContent = r.para;
+    $("mensaje").textContent = r.mensaje;
+    if (data.presupuesto) $("presupuesto").textContent = data.presupuesto;
+    $("ver").onclick = () => mostrar("resultado");
+    mostrar("tapado");
+  } catch { mostrar("error"); }
+})();
+</script>
+</body>
+</html>
